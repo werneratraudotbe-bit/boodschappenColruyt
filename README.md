@@ -24,7 +24,7 @@ De app leest en schrijft rechtstreeks in je sheet **BoodschappenColruyt** (tabbl
 
 ## 3. App installeren op je gsm
 
-1. Open de app-link op je gsm (in Chrome op Android, in Safari op iPhone).
+1. Open **https://werneratraudotbe-bit.github.io/boodschappenColruyt/** op je gsm (in Chrome op Android, in Safari op iPhone).
 2. Plak de web-app-URL en je sleutel, en tik **Verbinden**.
 3. Zet de app op je startscherm:
    - Android/Chrome: menu ⋮ → **App installeren** (of *Toevoegen aan startscherm*).
