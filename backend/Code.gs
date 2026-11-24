@@ -20,7 +20,7 @@ function doPost(e) {
   try {
     const req = JSON.parse(e.postData.contents);
     if (SLEUTEL === 'VERANDER-MIJ' || req.key !== SLEUTEL) return json_({ error: 'Verkeerde sleutel' });
-    const allowed = { getData, setAantal, saveItem, deleteItem, finishShopping };
+    const allowed = { getData, setAantal, saveItem, deleteItem, finishShopping, savePlaces };
     if (!allowed[req.fn]) return json_({ error: 'Onbekende functie' });
     return json_(allowed[req.fn].apply(null, req.args || []));
   } catch (err) {
@@ -137,6 +137,56 @@ function finishShopping(lijst) {
       const r = findRow_(sh, it.row, it.wat);
       if (r) sh.getRange(r, COL.aantal).setValue('');
     });
+    return getData();
+  });
+}
+
+/**
+ * Plaatsen beheren vanuit de app.
+ * soort: 'thuis' of 'colruyt'
+ * lijst: [{code, naam}] in de gewenste volgorde. code = bestaande waarde (leeg voor een nieuwe plaats).
+ * Een plaats die ontbreekt, wordt verwijderd (de producten verliezen die plaats).
+ * Een hernoemde plaats wordt ook bij alle producten aangepast.
+ */
+function savePlaces(soort, lijst) {
+  return withLock_(() => {
+    const tab = soort === 'colruyt' ? TAB_COLRUYT : TAB_THUIS;
+    const col = soort === 'colruyt' ? COL.colruyt : COL.thuis;
+    const ss = ss_();
+    const plSh = ss.getSheetByName(tab);
+    const oud = listCol_(tab);
+
+    const nieuw = [];
+    const hernoem = {};
+    (lijst || []).forEach(p => {
+      const naam = String(p.naam || '').trim();
+      if (!naam) return;
+      const code = String(p.code || '').trim();
+      const m = code.match(/^\d+[a-z]?-/i);
+      const nieuweCode = (m ? m[0] : '') + naam;
+      if (nieuw.indexOf(nieuweCode) >= 0) throw new Error('"' + naam + '" staat er twee keer in');
+      nieuw.push(nieuweCode);
+      if (code && code !== nieuweCode) hernoem[code] = nieuweCode;
+    });
+    oud.forEach(c => { if (!(c in hernoem) && nieuw.indexOf(c) < 0) hernoem[c] = ''; });
+
+    // Producten bijwerken
+    const sh = ss.getSheetByName(TAB_LIJST);
+    const last = sh.getLastRow();
+    if (last > 1 && Object.keys(hernoem).length) {
+      const rng = sh.getRange(2, col, last - 1, 1);
+      const vals = rng.getValues();
+      let changed = false;
+      vals.forEach(r => {
+        const v = String(r[0]).trim();
+        if (v in hernoem) { r[0] = hernoem[v]; changed = true; }
+      });
+      if (changed) rng.setValues(vals);
+    }
+
+    // Lijst met plaatsen herschrijven
+    plSh.getRange(1, 1, Math.max(plSh.getMaxRows(), 1), 1).clearContent();
+    if (nieuw.length) plSh.getRange(1, 1, nieuw.length, 1).setValues(nieuw.map(c => [c]));
     return getData();
   });
 }

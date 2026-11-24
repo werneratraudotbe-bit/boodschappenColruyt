@@ -38,7 +38,8 @@ Op een tweede toestel (bv. dat van je partner) doe je enkel stap 3.
 - **Winkel**: enkel wat je nodig hebt, in de volgorde van de Colruyt-gangen. Tik een product aan als het in je kar ligt. Met **Klaar met winkelen** worden de aangevinkte producten weer op 0 gezet.
 - **Bioplanet**: zet bij een product het vinkje *Kopen bij Bioplanet* (komt als `x` in kolom *Bioplanet*); het verschijnt dan in de Bioplanet-lijst in plaats van bij de Colruyt.
 - Zonder bereik werkt de app verder; wijzigingen worden bewaard zodra je weer online bent.
-- Je kan de sheet zelf gewoon blijven gebruiken. Nieuwe plaatsen voeg je toe in de tabbladen *PlaatsenThuis* en *PlaatsenColruyt*.
+- **Plaatsen**: beheer hier je kasten thuis en de gangen in de Colruyt. Toevoegen met **+**, hernoemen of verwijderen door op de naam te tikken, en de volgorde aanpassen met ↑ en ↓. Hernoem je een plaats, dan worden alle producten op die plaats mee aangepast.
+- De sheet dient enkel nog als opslag; je hoeft ze niet meer te openen.
 
 ## Script later aanpassen
 

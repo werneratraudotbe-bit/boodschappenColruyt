@@ -68,6 +68,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .dlg .cb input{width:20px;height:20px}
 .dlg .acts{display:flex;gap:8px;margin-top:18px;justify-content:flex-end;flex-wrap:wrap}
 .dlg .acts .btn{box-shadow:none;padding:11px 16px}
+.move{display:flex;gap:4px}
+.move button{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:18px;cursor:pointer}
+.move button:disabled{opacity:.3}
+.hint{color:var(--muted);font-size:13px;margin:4px 2px 0}
 .toast{position:fixed;left:50%;top:14px;transform:translate(-50%,-80px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;transition:transform .25s;z-index:20;max-width:90%}
 .toast.show{transform:translate(-50%,0)}
 </style>
@@ -83,6 +87,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   <nav>
     <button data-view="thuis" class="on">Thuis</button>
     <button data-view="winkel">Winkel <span class="badge" id="needCount">0</span></button>
+    <button data-view="plaatsen">Plaatsen</button>
   </nav>
 </header>
 <main id="main"></main>
@@ -102,6 +107,18 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     <span style="flex:1"></span>
     <button type="button" class="btn ghost" id="fCancel">Annuleren</button>
     <button type="submit" class="btn" id="fSave">Bewaren</button>
+  </div>
+</form></dialog>
+<dialog id="plDlg"><form class="dlg" method="dialog" id="plForm">
+  <h2 id="plTitle">Plaats</h2>
+  <label for="pNaam">Naam</label>
+  <input type="text" id="pNaam" required autocomplete="off">
+  <p class="hint" id="plInfo"></p>
+  <div class="acts">
+    <button type="button" class="btn danger" id="pDel">Verwijderen</button>
+    <span style="flex:1"></span>
+    <button type="button" class="btn ghost" id="pCancel">Annuleren</button>
+    <button type="submit" class="btn">Bewaren</button>
   </div>
 </form></dialog>
 <dialog id="cfgDlg"><form class="dlg" method="dialog" id="cfgForm">
@@ -127,6 +144,9 @@ var state = { items: [], thuis: [], colruyt: [] };
 var view = load('view', 'thuis');
 var shop = load('shop', 'colruyt');       // 'colruyt' | 'bioplanet'
 var onlyNeed = load('onlyNeed', false);
+var plSoort = load('plSoort', 'colruyt'); // 'thuis' | 'colruyt'
+var plEditing = null;                     // index in de lijst, of -1 voor nieuw
+var plTimer = null;
 var inCart = load('inCart', {});          // naam -> true
 var query = '';
 var pending = 0;
@@ -207,7 +227,9 @@ function render(){
   document.querySelectorAll('nav button').forEach(function(b){ b.classList.toggle('on', b.dataset.view === view); });
   var need = state.items.filter(function(i){ return i.aantal > 0; }).length;
   document.getElementById('needCount').textContent = need;
-  if (view === 'thuis') renderThuis(); else renderWinkel();
+  if (view === 'thuis') renderThuis();
+  else if (view === 'plaatsen') renderPlaatsen();
+  else renderWinkel();
 }
 
 function groupBy(items, key, order){
@@ -276,6 +298,112 @@ function renderWinkel(){
     ? '<button class="btn" id="finish">Klaar met winkelen (' + n + ' gekocht)</button>' : '';
 }
 
+function renderPlaatsen(){
+  var col = plSoort === 'colruyt';
+  var list = state[plSoort] || [];
+  var h = '<div class="chips"><button class="chip ' + (col ? '' : 'on') + '" data-pl="thuis">Thuis</button>'
+        + '<button class="chip ' + (col ? 'on' : '') + '" data-pl="colruyt">Colruyt</button></div>';
+  h += '<p class="hint" style="margin-bottom:10px">' + (col
+      ? 'Zet de gangen in de volgorde waarin je door de winkel loopt. Zo staat je winkellijst altijd in de juiste volgorde.'
+      : 'De volgorde hier is de volgorde van de groepen op het scherm Thuis.') + ' Tik op een naam om ze te wijzigen.</p>';
+  if (!list.length) h += '<div class="empty">Nog geen plaatsen. Tik op + om er een toe te voegen.</div>';
+  else {
+    h += '<div class="card">';
+    list.forEach(function(code, i){
+      var n = countAt(code);
+      h += '<div class="row" data-pi="' + i + '"><div class="name" data-pedit>' + esc(label(code))
+         + '<small>' + n + ' product' + (n === 1 ? '' : 'en') + '</small></div>'
+         + '<div class="move"><button data-mv="-1" aria-label="Omhoog"' + (i ? '' : ' disabled') + '>↑</button>'
+         + '<button data-mv="1" aria-label="Omlaag"' + (i < list.length - 1 ? '' : ' disabled') + '>↓</button></div></div>';
+    });
+    h += '</div>';
+  }
+  document.getElementById('main').innerHTML = h;
+  document.getElementById('bar').innerHTML = '<button class="btn fab" id="addPl" aria-label="Plaats toevoegen">+</button>';
+}
+function countAt(code){
+  var key = plSoort === 'colruyt' ? 'colruyt' : 'thuis';
+  return state.items.filter(function(i){ return i[key] === code; }).length;
+}
+
+// Zelfde logica als savePlaces in Code.gs: het nummer vooraan blijft, de naam verandert.
+function applyPlaces(d, soort, lijst){
+  var key = soort === 'colruyt' ? 'colruyt' : 'thuis';
+  var nieuw = [], hernoem = {};
+  lijst.forEach(function(p){
+    var naam = String(p.naam || '').trim(); if (!naam) return;
+    var code = String(p.code || '').trim();
+    var m = code.match(/^\d+[a-z]?-/i);
+    var nc = (m ? m[0] : '') + naam;
+    if (nieuw.indexOf(nc) >= 0) throw new Error('"' + naam + '" staat er twee keer in');
+    nieuw.push(nc);
+    if (code && code !== nc) hernoem[code] = nc;
+  });
+  (d[soort] || []).forEach(function(c){ if (!(c in hernoem) && nieuw.indexOf(c) < 0) hernoem[c] = ''; });
+  d.items.forEach(function(i){ if (i[key] in hernoem) i[key] = hernoem[i[key]]; });
+  d[soort] = nieuw;
+}
+
+function savePlaces(lijst, delay){
+  var soort = plSoort;
+  try { applyPlaces(state, soort, lijst); } catch (e) { toast(e.message); return; }
+  save('cache', state); render();
+  var payload = state[soort].map(function(c){ return { code: c, naam: label(c) }; });
+  clearTimeout(plTimer);
+  var go = function(){
+    track(api('savePlaces', soort, payload)).then(function(d){ setData(d); }, function(){ refresh(); });
+  };
+  // Hernoemen/verwijderen: lijst met de oude codes sturen zodat de server weet wat er hernoemd werd.
+  if (!delay) {
+    track(api('savePlaces', soort, lijst)).then(function(d){ setData(d); }, function(){ refresh(); });
+  } else plTimer = setTimeout(go, delay);
+}
+
+function movePlace(i, d){
+  var list = state[plSoort].slice();
+  var j = i + d; if (j < 0 || j >= list.length) return;
+  var t = list[i]; list[i] = list[j]; list[j] = t;
+  savePlaces(list.map(function(c){ return { code: c, naam: label(c) }; }), 900);
+}
+
+function openPlace(i){
+  plEditing = i;
+  var code = i >= 0 ? state[plSoort][i] : '';
+  document.getElementById('plTitle').textContent = i >= 0 ? 'Plaats wijzigen' : 'Nieuwe plaats ' + (plSoort === 'colruyt' ? 'in de Colruyt' : 'thuis');
+  document.getElementById('pNaam').value = i >= 0 ? label(code) : '';
+  var n = i >= 0 ? countAt(code) : 0;
+  document.getElementById('plInfo').textContent = i >= 0
+    ? (n ? 'Hernoemen past ook de ' + n + ' product' + (n === 1 ? '' : 'en') + ' op deze plaats aan.' : 'Er liggen geen producten op deze plaats.')
+    : 'Je nieuwe plaats komt onderaan; schuif ze daarna met ↑ naar de juiste plek.';
+  document.getElementById('pDel').style.display = i >= 0 ? '' : 'none';
+  document.getElementById('plDlg').showModal();
+}
+document.getElementById('plForm').onsubmit = function(e){
+  e.preventDefault();
+  var naam = document.getElementById('pNaam').value.trim(); if (!naam) return;
+  var lijst = state[plSoort].map(function(c){ return { code: c, naam: label(c) }; });
+  if (plEditing >= 0) lijst[plEditing].naam = naam; else lijst.push({ code: '', naam: naam });
+  document.getElementById('plDlg').close();
+  savePlaces(lijst);
+};
+document.getElementById('pCancel').onclick = function(){ document.getElementById('plDlg').close(); };
+document.getElementById('pDel').onclick = function(){
+  var b = document.getElementById('pDel');
+  var n = countAt(state[plSoort][plEditing]);
+  if (!b.dataset.sure){
+    b.dataset.sure = '1';
+    b.textContent = n ? 'Zeker? ' + n + ' product' + (n === 1 ? '' : 'en') + ' verliezen deze plaats' : 'Zeker verwijderen?';
+    return;
+  }
+  var lijst = state[plSoort].map(function(c){ return { code: c, naam: label(c) }; });
+  lijst.splice(plEditing, 1);
+  document.getElementById('plDlg').close();
+  savePlaces(lijst);
+};
+document.getElementById('plDlg').addEventListener('close', function(){
+  var b = document.getElementById('pDel'); delete b.dataset.sure; b.textContent = 'Verwijderen';
+});
+
 // ---------- acties ----------
 function find(wat){ return state.items.filter(function(i){ return i.wat === wat; })[0]; }
 
@@ -309,7 +437,7 @@ function finish(){
 function fillSelect(sel, list, val){
   var opts = ['<option value="">(geen)</option>'];
   var seen = false;
-  list.forEach(function(c){ if (c === val) seen = true; opts.push('<option value="' + esc(c) + '">' + esc(c) + '</option>'); });
+  list.forEach(function(c){ if (c === val) seen = true; opts.push('<option value="' + esc(c) + '">' + esc(label(c)) + '</option>'); });
   if (val && !seen) opts.push('<option value="' + esc(val) + '">' + esc(val) + '</option>');
   sel.innerHTML = opts.join(''); sel.value = val || '';
 }
@@ -356,13 +484,24 @@ document.getElementById('dlg').addEventListener('close', function(){
 
 document.addEventListener('click', function(e){
   var t = e.target;
+  var c;
   var nav = t.closest('nav button');
   if (nav){ view = nav.dataset.view; save('view', view); window.scrollTo(0, 0); render(); return; }
   if (t.closest('#refresh')){ refresh().then(function(){ toast('Bijgewerkt'); }); return; }
   if (t.closest('#settings')){ openCfg(); return; }
+  if (t.closest('#addPl')){ openPlace(-1); return; }
+  c = t.closest('[data-pl]');
+  if (c){ plSoort = c.dataset.pl; save('plSoort', plSoort); render(); return; }
+  var pr = t.closest('[data-pi]');
+  if (pr){
+    var pi = Number(pr.dataset.pi), mv = t.closest('[data-mv]');
+    if (mv){ if (!mv.disabled) movePlace(pi, Number(mv.dataset.mv)); return; }
+    if (t.closest('[data-pedit]')) openPlace(pi);
+    return;
+  }
   if (t.closest('#add')){ openEdit(null); return; }
   if (t.closest('#finish')){ finish(); return; }
-  var c = t.closest('[data-need]');
+  c = t.closest('[data-need]');
   if (c){ onlyNeed = c.dataset.need === '1'; save('onlyNeed', onlyNeed); render(); return; }
   c = t.closest('[data-shop]');
   if (c){ shop = c.dataset.shop; save('shop', shop); render(); return; }
@@ -405,6 +544,7 @@ function demoApi(fn, args){
   var find2 = function(w){ return d.items.filter(function(i){ return i.wat === w; })[0]; };
   if (fn === 'setAantal'){ var i = find2(args[1]); if (i) i.aantal = args[2]; }
   if (fn === 'finishShopping'){ args[0].forEach(function(x){ var i = find2(x.wat); if (i) i.aantal = 0; }); }
+  if (fn === 'savePlaces'){ applyPlaces(d, args[0], args[1]); }
   if (fn === 'deleteItem'){ d.items = d.items.filter(function(i){ return i.wat !== args[1]; }); }
   if (fn === 'saveItem'){
     var it = args[0], ex = it.oud ? find2(it.oud) : null;

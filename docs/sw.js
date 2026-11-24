@@ -1,5 +1,5 @@
 // Bewaart de app zelf offline. De lijst komt live uit de sheet (en wordt in de app gecachet).
-const CACHE = 'boodschappen-v1';
+const CACHE = 'boodschappen-v2';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-180.png'];
 
 self.addEventListener('install', e => {
