@@ -3,7 +3,7 @@
  * Plak dit in Extensies > Apps Script (bestand Code.gs) en implementeer als web-app.
  * Kies hieronder zelf een geheime sleutel; die vul je één keer in de app in.
  */
-const SLEUTEL = 'VERANDER-MIJ';
+const SLEUTEL = 'azer1234';
 const SHEET_ID = '1bIoeEPMJ2JWoE7QpoRwkq_oLDuoDSBML4of1ywsM9DI';
 const TAB_LIJST = 'Lijst';
 const TAB_THUIS = 'PlaatsenThuis';
