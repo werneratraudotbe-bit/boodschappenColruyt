@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#1f7a4d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Boodschappen</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<style>
+:root{
+  --bg:#f4f5f2; --card:#fff; --ink:#1d2320; --muted:#6b736e; --line:#e3e6e1;
+  --accent:#1f7a4d; --accent-ink:#fff; --accent-soft:#e3f1e9; --warn:#c0392b; --bio:#7a5a1f; --bio-soft:#f4ecdc;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#141816; --card:#1d2220; --ink:#e8ece9; --muted:#9aa39e; --line:#2c3330;
+    --accent:#3fae77; --accent-ink:#0d1a13; --accent-soft:#1f3329; --warn:#e66b5b; --bio:#d6b273; --bio-soft:#332a1b; }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--accent);color:var(--accent-ink);padding:10px 16px 0}
+.top{display:flex;align-items:center;gap:8px}
+.top h1{font-size:19px;margin:0;flex:1}
+.iconbtn{background:none;border:0;color:inherit;font-size:20px;padding:6px;cursor:pointer;border-radius:8px}
+#sync{font-size:12px;opacity:.85}
+nav{display:flex;margin-top:8px}
+nav button{flex:1;background:none;border:0;color:inherit;opacity:.7;font:600 15px system-ui;padding:10px 0 12px;border-bottom:3px solid transparent;cursor:pointer}
+nav button.on{opacity:1;border-color:currentColor}
+nav .badge{display:inline-block;min-width:20px;padding:0 6px;margin-left:4px;border-radius:10px;background:rgba(255,255,255,.25);font-size:12px;line-height:20px}
+main{padding:12px 16px 110px;max-width:640px;margin:0 auto}
+.search{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font-size:16px;margin-bottom:10px}
+.chips{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 14px;font-size:14px;cursor:pointer}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.group{margin:14px 0 4px;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;display:flex;justify-content:space-between}
+.card{background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+.row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--line);min-height:54px}
+.row:first-child{border-top:0}
+.row .name{flex:1;min-width:0;cursor:pointer}
+.row .name small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.row.need{background:var(--accent-soft)}
+.tag{font-size:11px;font-weight:700;color:var(--bio);background:var(--bio-soft);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+.stepper{display:flex;align-items:center;gap:2px}
+.stepper button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:22px;line-height:1;cursor:pointer}
+.stepper button.plus{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stepper span{min-width:28px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+.check{width:30px;height:30px;border-radius:8px;border:2px solid var(--line);flex:none;display:grid;place-items:center;font-size:18px;color:var(--accent-ink)}
+.row.done .check{background:var(--accent);border-color:var(--accent)}
+.row.done .name{text-decoration:line-through;color:var(--muted)}
+.qty{font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent)}
+.empty{text-align:center;color:var(--muted);padding:40px 10px}
+.bar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 30%);display:flex;justify-content:center;gap:10px;pointer-events:none}
+.bar>*{pointer-events:auto}
+.btn{border:0;border-radius:14px;padding:14px 20px;font:600 16px system-ui;cursor:pointer;background:var(--accent);color:var(--accent-ink);box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:none}
+.btn.danger{background:none;color:var(--warn);box-shadow:none;border:1px solid var(--line)}
+.fab{width:58px;height:58px;border-radius:50%;font-size:30px;padding:0}
+dialog{border:0;border-radius:18px;padding:0;width:min(520px,calc(100% - 24px));background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.dlg{padding:18px}
+.dlg h2{margin:0 0 12px;font-size:18px}
+.dlg label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+.dlg input[type=text],.dlg select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-size:16px}
+.dlg .cb{display:flex;align-items:center;gap:8px;margin-top:14px;color:var(--ink);font-size:15px}
+.dlg .cb input{width:20px;height:20px}
+.dlg .acts{display:flex;gap:8px;margin-top:18px;justify-content:flex-end;flex-wrap:wrap}
+.dlg .acts .btn{box-shadow:none;padding:11px 16px}
+.toast{position:fixed;left:50%;top:14px;transform:translate(-50%,-80px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;transition:transform .25s;z-index:20;max-width:90%}
+.toast.show{transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>Boodschappen</h1>
+    <span id="sync"></span>
+    <button class="iconbtn" id="refresh" title="Vernieuwen" aria-label="Vernieuwen">⟳</button>
+    <button class="iconbtn" id="settings" title="Instellingen" aria-label="Instellingen">⚙</button>
+  </div>
+  <nav>
+    <button data-view="thuis" class="on">Thuis</button>
+    <button data-view="winkel">Winkel <span class="badge" id="needCount">0</span></button>
+  </nav>
+</header>
+<main id="main"></main>
+<div class="bar" id="bar"></div>
+
+<dialog id="dlg"><form class="dlg" method="dialog" id="form">
+  <h2 id="dlgTitle">Product</h2>
+  <label for="fWat">Naam</label>
+  <input type="text" id="fWat" required autocomplete="off">
+  <label for="fThuis">Plaats thuis</label>
+  <select id="fThuis"></select>
+  <label for="fColruyt">Plaats Colruyt</label>
+  <select id="fColruyt"></select>
+  <label class="cb"><input type="checkbox" id="fBio"> Kopen bij Bioplanet</label>
+  <div class="acts">
+    <button type="button" class="btn danger" id="fDel">Verwijderen</button>
+    <span style="flex:1"></span>
+    <button type="button" class="btn ghost" id="fCancel">Annuleren</button>
+    <button type="submit" class="btn" id="fSave">Bewaren</button>
+  </div>
+</form></dialog>
+<dialog id="cfgDlg"><form class="dlg" method="dialog" id="cfgForm">
+  <h2>Koppelen aan je Google Sheet</h2>
+  <p style="margin:0;color:var(--muted);font-size:14px">Plak de web-app-URL van je Apps Script en de sleutel die je daarin koos. Dit wordt enkel op dit toestel bewaard.</p>
+  <label for="cUrl">Web-app-URL</label>
+  <input type="text" id="cUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" required>
+  <label for="cKey">Sleutel</label>
+  <input type="text" id="cKey" autocomplete="off" required>
+  <div class="acts">
+    <button type="button" class="btn ghost" id="cCancel">Annuleren</button>
+    <button type="submit" class="btn">Verbinden</button>
+  </div>
+</form></dialog>
+<div class="toast" id="toast"></div>
+
+<script>
+var DEMO = /[?&]demo\b/.test(location.search);
+var cfg = load('cfg', null);              // {url, key}
+var queue = load('queue', []);            // wijzigingen die nog naar de sheet moeten
+
+var state = { items: [], thuis: [], colruyt: [] };
+var view = load('view', 'thuis');
+var shop = load('shop', 'colruyt');       // 'colruyt' | 'bioplanet'
+var onlyNeed = load('onlyNeed', false);
+var inCart = load('inCart', {});          // naam -> true
+var query = '';
+var pending = 0;
+var timers = {};
+var editing = null;
+
+function load(k, d){ try{ var v = localStorage.getItem('bs_'+k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } }
+function save(k, v){ try{ localStorage.setItem('bs_'+k, JSON.stringify(v)); }catch(e){} }
+function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function label(code){ return String(code || '').replace(/^\d+[a-z]?-/i, '') || 'Zonder plaats'; }
+
+// ---------- backend ----------
+function NetErr(msg){ var e = new Error(msg); e.offline = true; return e; }
+function api(fn){
+  var args = Array.prototype.slice.call(arguments, 1);
+  if (DEMO) return demoApi(fn, args);
+  if (!cfg) return Promise.reject(new Error('Nog niet gekoppeld'));
+  // text/plain: geen CORS-preflight, dat kan Apps Script niet beantwoorden
+  return fetch(cfg.url, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+                          body: JSON.stringify({ key: cfg.key, fn: fn, args: args }) })
+    .catch(function(){ throw NetErr('Geen verbinding'); })
+    .then(function(r){ return r.json().catch(function(){ throw new Error('Onverwacht antwoord (klopt de URL?)'); }); })
+    .then(function(d){ if (d && d.error) throw new Error(d.error); return d; });
+}
+function track(p, quiet){
+  pending++; setSync();
+  return p.then(function(v){ pending--; setSync(); return v; },
+                function(e){ pending--; setSync(); if (!quiet) toast((e && e.offline) ? 'Offline: wordt later bewaard' : 'Niet gelukt: ' + (e && e.message || e)); throw e; });
+}
+function setSync(){
+  document.getElementById('sync').textContent = pending ? 'opslaan…'
+    : queue.length ? 'offline · ' + queue.length + ' wachtend' : '';
+}
+
+// Aantallen en "klaar met winkelen" werken ook offline: ze wachten in een wachtrij.
+function enqueue(fn, args){
+  if (fn === 'setAantal') queue = queue.filter(function(q){ return !(q.fn === 'setAantal' && q.args[1] === args[1]); });
+  queue.push({ fn: fn, args: args }); save('queue', queue); setSync();
+}
+function send(fn, args){
+  if (queue.length){ enqueue(fn, args); return flush(); }
+  return track(api.apply(null, [fn].concat(args)), true).catch(function(e){
+    if (e.offline){ enqueue(fn, args); return; }
+    toast('Niet gelukt: ' + e.message); refresh();
+  });
+}
+var flushing = null;
+function flush(){
+  if (flushing) return flushing;
+  if (!queue.length) return Promise.resolve();
+  var next = queue[0];
+  flushing = track(api.apply(null, [next.fn].concat(next.args)), true).then(function(){
+    queue.shift(); save('queue', queue); flushing = null; setSync(); return flush();
+  }, function(e){
+    flushing = null;
+    if (!e.offline){ queue.shift(); save('queue', queue); setSync(); toast('Niet gelukt: ' + e.message); return flush(); }
+  });
+  return flushing;
+}
+
+function refresh(){
+  if (!cfg && !DEMO){ openCfg(); return Promise.resolve(); }
+  return flush().then(function(){
+    if (queue.length) return; // nog offline: toon wat we hebben
+    return track(api('getData')).then(function(d){ setData(d); });
+  });
+}
+function setData(d){
+  state = d; save('cache', d);
+  var names = {}; d.items.forEach(function(i){ names[i.wat] = 1; });
+  Object.keys(inCart).forEach(function(n){ if (!names[n]) delete inCart[n]; });
+  save('inCart', inCart);
+  render();
+}
+
+// ---------- rendering ----------
+function render(){
+  document.querySelectorAll('nav button').forEach(function(b){ b.classList.toggle('on', b.dataset.view === view); });
+  var need = state.items.filter(function(i){ return i.aantal > 0; }).length;
+  document.getElementById('needCount').textContent = need;
+  if (view === 'thuis') renderThuis(); else renderWinkel();
+}
+
+function groupBy(items, key, order){
+  var g = {};
+  items.forEach(function(i){ var k = i[key] || ''; (g[k] = g[k] || []).push(i); });
+  var keys = Object.keys(g).sort(function(a, b){
+    var ia = order.indexOf(a), ib = order.indexOf(b);
+    if (ia < 0) ia = a ? 900 : 999; if (ib < 0) ib = b ? 900 : 999;
+    return ia - ib || a.localeCompare(b);
+  });
+  return keys.map(function(k){ return { key: k, items: g[k].sort(function(a, b){ return a.wat.localeCompare(b.wat); }) }; });
+}
+
+function renderThuis(){
+  var q = query.toLowerCase();
+  var items = state.items.filter(function(i){
+    return (!q || i.wat.toLowerCase().indexOf(q) >= 0) && (!onlyNeed || i.aantal > 0);
+  });
+  var h = '<input class="search" id="q" type="search" placeholder="Zoeken…" value="' + esc(query) + '">';
+  h += '<div class="chips"><button class="chip ' + (onlyNeed ? '' : 'on') + '" data-need="0">Alles</button>'
+     + '<button class="chip ' + (onlyNeed ? 'on' : '') + '" data-need="1">Nodig</button></div>';
+  if (!items.length) h += '<div class="empty">' + (state.items.length ? 'Niets gevonden.' : 'Laden…') + '</div>';
+  groupBy(items, 'thuis', state.thuis).forEach(function(g){
+    h += '<div class="group"><span>' + esc(label(g.key)) + '</span></div><div class="card">';
+    g.items.forEach(function(i){
+      h += '<div class="row' + (i.aantal > 0 ? ' need' : '') + '" data-wat="' + esc(i.wat) + '">'
+         + '<div class="name" data-edit>' + esc(i.wat) + (i.bio ? '<span class="tag">Bioplanet</span>' : '')
+         + '<small>' + esc(label(i.colruyt)) + '</small></div>'
+         + '<div class="stepper"><button data-step="-1" aria-label="Minder">−</button><span>' + (i.aantal || '') + '</span>'
+         + '<button class="plus" data-step="1" aria-label="Meer">+</button></div></div>';
+    });
+    h += '</div>';
+  });
+  document.getElementById('main').innerHTML = h;
+  document.getElementById('bar').innerHTML = '<button class="btn fab" id="add" aria-label="Product toevoegen">+</button>';
+  var qi = document.getElementById('q');
+  qi.oninput = function(){ query = qi.value; var pos = qi.selectionStart; renderThuis(); var n = document.getElementById('q'); n.focus(); n.setSelectionRange(pos, pos); };
+}
+
+function renderWinkel(){
+  var bio = shop === 'bioplanet';
+  var items = state.items.filter(function(i){ return i.aantal > 0 && (!!i.bio === bio); });
+  var other = state.items.filter(function(i){ return i.aantal > 0 && (!!i.bio !== bio); }).length;
+  var h = '<div class="chips"><button class="chip ' + (bio ? '' : 'on') + '" data-shop="colruyt">Colruyt</button>'
+        + '<button class="chip ' + (bio ? 'on' : '') + '" data-shop="bioplanet">Bioplanet</button></div>';
+  if (!items.length){
+    h += '<div class="empty">Niets nodig in ' + (bio ? 'Bioplanet' : 'de Colruyt') + '.'
+       + (other ? '<br>' + other + ' product(en) voor ' + (bio ? 'de Colruyt' : 'Bioplanet') + '.' : '<br>Tik bij <b>Thuis</b> op + om iets op de lijst te zetten.') + '</div>';
+  }
+  var groups = bio ? [{ key: '', items: items.sort(function(a, b){ return a.wat.localeCompare(b.wat); }) }]
+                   : groupBy(items, 'colruyt', state.colruyt);
+  groups.forEach(function(g){
+    var open = g.items.filter(function(i){ return !inCart[i.wat]; }).length;
+    if (!bio) h += '<div class="group"><span>' + esc(label(g.key)) + '</span><span>' + (open ? open : '✓') + '</span></div>';
+    h += '<div class="card">';
+    g.items.sort(function(a, b){ return (inCart[a.wat] ? 1 : 0) - (inCart[b.wat] ? 1 : 0); }).forEach(function(i){
+      h += '<div class="row' + (inCart[i.wat] ? ' done' : '') + '" data-wat="' + esc(i.wat) + '" data-cart>'
+         + '<div class="check">' + (inCart[i.wat] ? '✓' : '') + '</div>'
+         + '<div class="name">' + esc(i.wat) + '</div><div class="qty">' + i.aantal + '×</div></div>';
+    });
+    h += '</div>';
+  });
+  document.getElementById('main').innerHTML = h;
+  var n = items.filter(function(i){ return inCart[i.wat]; }).length;
+  document.getElementById('bar').innerHTML = n
+    ? '<button class="btn" id="finish">Klaar met winkelen (' + n + ' gekocht)</button>' : '';
+}
+
+// ---------- acties ----------
+function find(wat){ return state.items.filter(function(i){ return i.wat === wat; })[0]; }
+
+function step(wat, d){
+  var it = find(wat); if (!it) return;
+  it.aantal = Math.max(0, (it.aantal || 0) + d);
+  if (!it.aantal) { delete inCart[wat]; save('inCart', inCart); }
+  save('cache', state); render();
+  clearTimeout(timers[wat]);
+  timers[wat] = setTimeout(function(){
+    send('setAantal', [it.row, it.wat, it.aantal]);
+  }, 600);
+}
+
+function toggleCart(wat){
+  if (inCart[wat]) delete inCart[wat]; else inCart[wat] = true;
+  save('inCart', inCart); render();
+}
+
+function finish(){
+  var bio = shop === 'bioplanet';
+  var bought = state.items.filter(function(i){ return i.aantal > 0 && !!i.bio === bio && inCart[i.wat]; });
+  if (!bought.length) return;
+  bought.forEach(function(i){ i.aantal = 0; delete inCart[i.wat]; });
+  save('inCart', inCart); render();
+  save('cache', state);
+  toast(bought.length + ' product(en) van de lijst gehaald');
+  send('finishShopping', [bought.map(function(i){ return { row: i.row, wat: i.wat }; })]);
+}
+
+function fillSelect(sel, list, val){
+  var opts = ['<option value="">(geen)</option>'];
+  var seen = false;
+  list.forEach(function(c){ if (c === val) seen = true; opts.push('<option value="' + esc(c) + '">' + esc(c) + '</option>'); });
+  if (val && !seen) opts.push('<option value="' + esc(val) + '">' + esc(val) + '</option>');
+  sel.innerHTML = opts.join(''); sel.value = val || '';
+}
+
+function openEdit(wat){
+  editing = wat ? find(wat) : null;
+  document.getElementById('dlgTitle').textContent = editing ? 'Product aanpassen' : 'Nieuw product';
+  document.getElementById('fWat').value = editing ? editing.wat : query;
+  fillSelect(document.getElementById('fThuis'), state.thuis, editing ? editing.thuis : '');
+  fillSelect(document.getElementById('fColruyt'), state.colruyt, editing ? editing.colruyt : '');
+  document.getElementById('fBio').checked = editing ? !!editing.bio : false;
+  document.getElementById('fDel').style.display = editing ? '' : 'none';
+  document.getElementById('dlg').showModal();
+}
+
+document.getElementById('form').onsubmit = function(e){
+  e.preventDefault();
+  var item = {
+    wat: document.getElementById('fWat').value.trim(),
+    thuis: document.getElementById('fThuis').value,
+    colruyt: document.getElementById('fColruyt').value,
+    bio: document.getElementById('fBio').checked
+  };
+  if (!item.wat) return;
+  if (editing){ item.row = editing.row; item.oud = editing.wat; }
+  document.getElementById('dlg').close();
+  track(api('saveItem', item)).then(function(d){ setData(d); toast('Bewaard'); });
+};
+document.getElementById('fCancel').onclick = function(){ document.getElementById('dlg').close(); };
+document.getElementById('fDel').onclick = function(){
+  if (!editing) return;
+  var it = editing;
+  if (!document.getElementById('fDel').dataset.sure){
+    document.getElementById('fDel').dataset.sure = '1';
+    document.getElementById('fDel').textContent = 'Zeker verwijderen?';
+    return;
+  }
+  document.getElementById('dlg').close();
+  track(api('deleteItem', it.row, it.wat)).then(function(d){ setData(d); toast('"' + it.wat + '" verwijderd'); });
+};
+document.getElementById('dlg').addEventListener('close', function(){
+  var b = document.getElementById('fDel'); delete b.dataset.sure; b.textContent = 'Verwijderen';
+});
+
+document.addEventListener('click', function(e){
+  var t = e.target;
+  var nav = t.closest('nav button');
+  if (nav){ view = nav.dataset.view; save('view', view); window.scrollTo(0, 0); render(); return; }
+  if (t.closest('#refresh')){ refresh().then(function(){ toast('Bijgewerkt'); }); return; }
+  if (t.closest('#settings')){ openCfg(); return; }
+  if (t.closest('#add')){ openEdit(null); return; }
+  if (t.closest('#finish')){ finish(); return; }
+  var c = t.closest('[data-need]');
+  if (c){ onlyNeed = c.dataset.need === '1'; save('onlyNeed', onlyNeed); render(); return; }
+  c = t.closest('[data-shop]');
+  if (c){ shop = c.dataset.shop; save('shop', shop); render(); return; }
+  var row = t.closest('.row'); if (!row) return;
+  var wat = row.dataset.wat;
+  var s = t.closest('[data-step]');
+  if (s){ step(wat, Number(s.dataset.step)); return; }
+  if (t.closest('[data-edit]')){ openEdit(wat); return; }
+  if (row.hasAttribute('data-cart')) toggleCart(wat);
+});
+
+var toastTimer;
+function toast(msg){
+  var el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2200);
+}
+
+function openCfg(){
+  document.getElementById('cUrl').value = cfg ? cfg.url : '';
+  document.getElementById('cKey').value = cfg ? cfg.key : '';
+  document.getElementById('cfgDlg').showModal();
+}
+document.getElementById('cCancel').onclick = function(){ document.getElementById('cfgDlg').close(); };
+document.getElementById('cfgForm').onsubmit = function(e){
+  e.preventDefault();
+  var old = cfg;
+  cfg = { url: document.getElementById('cUrl').value.trim(), key: document.getElementById('cKey').value.trim() };
+  track(api('getData')).then(function(d){
+    save('cfg', cfg); document.getElementById('cfgDlg').close(); setData(d); toast('Verbonden: ' + d.items.length + ' producten');
+  }, function(){ cfg = old; });
+};
+window.addEventListener('online', function(){ refresh(); });
+
+// Opnieuw ophalen als je terugkeert naar de app (bv. iemand anders paste de lijst aan)
+document.addEventListener('visibilitychange', function(){ if (!document.hidden && !pending) refresh(); });
+
+// ---------- demo (enkel als er geen backend is, om de app te bekijken) ----------
+function demoApi(fn, args){
+  var d = load('demo', null) || window.DEMO_DATA || { items: [], thuis: [], colruyt: [] };
+  var find2 = function(w){ return d.items.filter(function(i){ return i.wat === w; })[0]; };
+  if (fn === 'setAantal'){ var i = find2(args[1]); if (i) i.aantal = args[2]; }
+  if (fn === 'finishShopping'){ args[0].forEach(function(x){ var i = find2(x.wat); if (i) i.aantal = 0; }); }
+  if (fn === 'deleteItem'){ d.items = d.items.filter(function(i){ return i.wat !== args[1]; }); }
+  if (fn === 'saveItem'){
+    var it = args[0], ex = it.oud ? find2(it.oud) : null;
+    if (ex){ ex.wat = it.wat; ex.thuis = it.thuis; ex.colruyt = it.colruyt; ex.bio = it.bio; }
+    else d.items.push({ row: 0, wat: it.wat, aantal: 0, thuis: it.thuis, colruyt: it.colruyt, bio: it.bio });
+    d.items.sort(function(a, b){ return a.wat.localeCompare(b.wat); });
+  }
+  save('demo', d);
+  return Promise.resolve(fn === 'setAantal' ? {} : JSON.parse(JSON.stringify(d)));
+}
+
+// ---------- start ----------
+var cached = load('cache', null);
+if (cached) { state = cached; }
+render();
+refresh();
+if ('serviceWorker' in navigator && !DEMO) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
