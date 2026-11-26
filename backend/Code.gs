@@ -12,7 +12,7 @@ const TAB_COLRUYT = 'PlaatsenColruyt';
 const COL = { wat: 1, aantal: 2, thuis: 3, colruyt: 4, bio: 5 };
 
 function doGet(e) {
-  return json_({ ok: true, app: 'boodschappen' });
+  return json_({ ok: true, app: 'boodschappen', versie: VERSIE });
 }
 
 // De app stuurt POST {key, fn, args}
@@ -63,7 +63,7 @@ function getData() {
       bio: String(r[4]).trim() !== ''
     });
   });
-  return { items: items, thuis: listCol_(TAB_THUIS), colruyt: listCol_(TAB_COLRUYT), t: Date.now() };
+  return { items: items, thuis: listCol_(TAB_THUIS), colruyt: listCol_(TAB_COLRUYT), versie: VERSIE, t: Date.now() };
 }
 
 // Zoek de rij terug op naam, voor het geval de sheet intussen gesorteerd werd.
